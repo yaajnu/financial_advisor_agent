@@ -1,0 +1,5 @@
+.env
+*.txt
+venv
+portfolio_env
+*.db
