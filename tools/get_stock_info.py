@@ -1,22 +1,21 @@
+import os
 from langchain_core.tools import tool
-from kiteconnect import KiteConnect
-from ..utils import (
-    create_sqlite_connection,
-    autologin_zerodha,
+from financial_advisor_agent.utils import (
     check_internal_db,
-    calculate_indicators,
+    conn,
+    cursor,
 )
-from ..constants import key_secret
+
+from .utils import calculate_indicators
+from financial_advisor_agent.constants import key_secret
 import pandas as pd
 
-conn, cursor = create_sqlite_connection("financial_advisor.db")
 
-
-@tool(
-    "get_stock_info",
-    description="Get historical information about a stock including historical data",
-)
-def get_stock_info(stock_symbol: str, from_date: str, to_date: str) -> dict:
+# @tool(
+#     "get_stock_info",
+#     description="Get historical information about a stock including historical data",
+# )
+def get_stock_info(stock_symbol: str, from_date: str, to_date: str, kite) -> dict:
     """
     Get information about a stock.
 
@@ -29,7 +28,9 @@ def get_stock_info(stock_symbol: str, from_date: str, to_date: str) -> dict:
         str: Information about the stock.
     """
     # Placeholder for actual stock information retrieval logic
-    if check_internal_db(stock_symbol):
+    access_token = os.environ.get("KITE_ACCESS_TOKEN")
+    print("KITE_ACCESS_TOKEN:", access_token)
+    if check_internal_db(cursor, stock_symbol):
         query = """SELECT * 
             FROM historical_price_data 
             WHERE stock_symbol = ? AND timestamp BETWEEN ? AND ?        """
@@ -38,19 +39,14 @@ def get_stock_info(stock_symbol: str, from_date: str, to_date: str) -> dict:
         if result:
             print("BONDAAAAAAAAAAAA")
             return pd.DataFrame(result).to_dict()
-        else:
-            return {
-                f"No data found for {stock_symbol} between {from_date} and {to_date}."
-            }
     else:
         print("extracting from zerodha")
         """ ZERODHA FETCH DATA LOGIC"""
-        access_token = autologin_zerodha(key_secret)
-        print(f"Access Token: {access_token}")
-        print(f"Key Secret: {key_secret}")
-        kite = KiteConnect(api_key=key_secret[0])
-        kite.set_access_token(access_token)
-        all_insts = kite.instruments("BSE")
+
+        if not access_token:
+            print("Access token not found, please AUTHENTICATE first.")
+            return {f"Access token not found for accessing the {stock_symbol} data."}
+        all_insts = kite.instruments("NSE")
         all_insts_df = pd.DataFrame(all_insts)
         stock_symbol = stock_symbol.upper()
         if stock_symbol not in all_insts_df["tradingsymbol"].values:
@@ -68,7 +64,7 @@ def get_stock_info(stock_symbol: str, from_date: str, to_date: str) -> dict:
         historical_data = kite.historical_data(
             from_date=from_date,
             to_date=to_date,
-            interval="minute",
+            interval="day",
             instrument_token=instrument_token,
         )
         # Convert to DataFrame for easier manipulation

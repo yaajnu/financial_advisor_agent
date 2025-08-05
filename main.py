@@ -1,3 +1,5 @@
+import os
+import traceback
 import gradio as gr
 from dotenv import load_dotenv
 from kiteconnect import KiteConnect
@@ -5,7 +7,10 @@ from financial_advisor_agent.constants import key_secret
 import webbrowser
 from financial_advisor_agent.agents.market_sentiment_agent import (
     create_market_sentiment_agent,
+    create_tool_agent,
+    market_sentiment_nodes,
 )
+from functools import partial
 
 # Assuming your agent messages are from LangChain
 from langchain_core.messages import AIMessage, ToolMessage
@@ -44,8 +49,11 @@ def generate_session(request_token, auth_state):
     try:
         data = kite.generate_session(request_token, api_secret=key_secret[1])
         access_token = data["access_token"]
+        print(f"Access Token: {access_token}")  # For debugging purposes
+        os.environ["KITE_ACCESS_TOKEN"] = access_token if access_token else ""
         auth_state["access_token"] = access_token
         kite.set_access_token(access_token)
+        auth_state["kite"] = kite  # Update the kite instance with the new access token
         feedback = gr.Markdown(
             "✅ **Success!** Session generated and access token is now active.",
             visible=True,
@@ -77,8 +85,7 @@ def format_rationale_messages(messages):
             for tool_call in msg.tool_calls:
                 formatted_string += f"- Calling tool: `{tool_call['name']}` with arguments: `{tool_call['args']}`\n"
         elif isinstance(msg, ToolMessage):
-            print(msg)
-            formatted_string += f"\n**🛠️ Tool Output for `{msg.tool_call_id}`:**\n"
+            formatted_string += f"\n**🛠️ Tool Output for `{msg.name}`:**\n"
             formatted_string += f"```\n{msg.content}\n```\n\n"
         elif isinstance(msg, AIMessage):
             # This is the final answer, we can omit it or show it as 'Final Thought'
@@ -106,7 +113,9 @@ def chat_response(user_message, history, auth_state):
 
     try:
         kite = auth_state["kite"]
-        agent = create_market_sentiment_agent()
+        top_agent = create_tool_agent(kite=kite)
+        top_agent_node = partial(market_sentiment_nodes, agent=top_agent, name="llm")
+        agent = create_market_sentiment_agent(top_agent_node)
         inputs = {"messages": [("user", user_message)]}
 
         full_response = ""
@@ -127,6 +136,7 @@ def chat_response(user_message, history, auth_state):
             yield history, rationale_string
 
     except Exception as e:
+        print(traceback.format_exc(e))
         history[-1][1] = f"An error occurred: {e}"
         yield history, f"An error occurred during generation: {e}"
 

@@ -2,26 +2,6 @@ import talib
 import requests
 
 
-def check_internal_db(cursor, stock_symbol: str, is_price_data: bool = True) -> bool:
-    """
-    Check if the stock symbol exists in the internal database.
-    """
-    if is_price_data:
-        query = """
-            SELECT COUNT(*) 
-            FROM historical_price_data 
-            WHERE stock_symbol = ?
-            """
-    else:
-        query = """
-            SELECT COUNT(*) 
-            FROM indicator_data 
-            WHERE stock_symbol = ?"""
-    cursor.execute(query, (stock_symbol,))
-    result = cursor.fetchone()
-    return result[0] > 0
-
-
 def calculate_indicators(df):
     # RSI
     df["RSI"] = talib.RSI(df["close"], timeperiod=14)

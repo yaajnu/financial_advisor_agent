@@ -1,27 +1,31 @@
 import datetime
-from langchain_core.messages import ToolMessage
+from typing import Annotated, Any, Dict, Sequence, TypedDict
+
+from langchain_core.messages import BaseMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
-from typing import Annotated, Sequence, TypedDict
-from langchain_core.messages import BaseMessage
-from langgraph.graph.message import (
-    add_messages,
-)  # helper function to add messages to the state
-from langchain_core.messages import SystemMessage
-from ..constants import google_search_api_key
+from langgraph.graph.message import add_messages
 
-from ..tools.utils import market_sentiment_tools
+from financial_advisor_agent.constants import GOOGLE_SEARCH_API_KEY
+from financial_advisor_agent.tools.get_indicator_data import get_indicator_data
+from financial_advisor_agent.tools.get_stock_info import get_stock_info
+from financial_advisor_agent.tools.get_news_headlines import get_news_headlines
 
-system_prompt = SystemMessage(
-    content="You are an expert financial assistant."
-    "Use tools to find accurate information about the historical and indicator data and give the market sentiment. But dont use the tools to get data for more than 45 days in the past from the current date"
-    f"The current date is {datetime.now().strftime('%Y-%m-%d')}\
-           The google search api key is {google_search_api_key}."
-)
+# from financial_advisor_agent.tools.utils import market_sentiment_tools
+from financial_advisor_agent.prompts.system_prompts import market_sentiment_agent_prompt
+
+
+tools = [
+    get_indicator_data,
+    get_news_headlines,
+]
+
+market_sentiment_tools = {tool.name: tool for tool in tools}
 
 
 class AgentState(TypedDict):
     """The state of the agent."""
 
+    auth_keys: dict[str, Any]
     messages: Annotated[Sequence[BaseMessage], add_messages]
     number_of_steps: int
 
@@ -47,12 +51,11 @@ def call_tool(state: AgentState):
 
 
 def call_model(
-    model,
     state: AgentState,
     config: RunnableConfig,
 ):
     # Invoke the model with the system prompt and the messages
-    messages_with_system = [system_prompt] + state["messages"]
+    messages_with_system = [market_sentiment_agent_prompt] + state["messages"]
     response = model.invoke(messages_with_system, config)
     # We return a list, because this will get added to the existing messages state using the add_messages reducer
     return {"messages": [response]}

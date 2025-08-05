@@ -3,3 +3,5 @@
 venv
 portfolio_env
 *.db
+node_modules/
+__pycache__

@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict
 from langchain.tools import tool
-from .utils import check_internal_db, conn
+from financial_advisor_agent.utils import check_internal_db, conn, cursor
 
 
 @tool(
@@ -20,7 +20,7 @@ def get_indicator_data(stock_symbol: str, from_date: str, to_date: str) -> dict:
     Returns:
         str: Historical data for the specified stock.
     """
-    if check_internal_db(stock_symbol, is_price_data=False):
+    if check_internal_db(cursor, stock_symbol, is_price_data=False):
         query = """SELECT * 
            FROM indicator_data 
            WHERE stock_symbol = ? AND timestamp BETWEEN ? AND ?"""
