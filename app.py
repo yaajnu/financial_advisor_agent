@@ -78,6 +78,7 @@ def format_rationale_messages(messages):
 
     formatted_string = "### Agent Rationale\n\n"
     for msg in intermediate_steps:
+        print(f"Processing message: {msg}")
         if isinstance(msg, AIMessage) and msg.tool_calls:
             formatted_string += "**🤖 Thought & Tool Call:**\n"
             if msg.content:
@@ -116,11 +117,17 @@ def chat_response(user_message, history, auth_state):
         top_agent = create_tool_agent(kite=kite)
         top_agent_node = partial(market_sentiment_nodes, agent=top_agent, name="llm")
         agent = create_market_sentiment_agent(top_agent_node)
-        inputs = {"messages": [("user", user_message)]}
+        inputs = {
+            "messages": [("user", user_message)],
+            "agent_scratchpad": [],
+            "kite": kite,
+        }
 
         full_response = ""
-        for state in agent.stream(inputs, stream_mode="values"):
+        for state in top_agent.stream(inputs, stream_mode="values"):
+            # for state in top_agent.invoke(inputs, stream_mode="values"):
             all_messages = state["messages"]
+            print(f"Current messages: {all_messages}")
             # The final user-facing response is always the content of the last AIMessage
             final_message_obj = next(
                 (m for m in reversed(all_messages) if isinstance(m, AIMessage)), None
@@ -133,6 +140,9 @@ def chat_response(user_message, history, auth_state):
             rationale_string = format_rationale_messages(all_messages)
 
             # Yield a tuple to update both components
+            # history = top_agent.invoke(inputs)
+            print(f"Agent response: {history}")
+            print("-------------")
             yield history, rationale_string
 
     except Exception as e:
