@@ -3,8 +3,13 @@ from langgraph.graph import StateGraph, END
 # from .utils import call_model, call_tool, AgentState, should_continue
 from financial_advisor_agent.agents.utils import tools
 from financial_advisor_agent.prompts.system_prompts import market_sentiment_agent_prompt
-from financial_advisor_agent.tools.get_stock_info import get_stock_info
+from financial_advisor_agent.tools.get_stock_info import (
+    get_stock_info,
+    State,
+    # create_get_stock_info_tool,
+)
 from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import Tool
 from functools import partial
 from langchain_core.prompts import (
@@ -43,18 +48,19 @@ def create_tool_agent(system_prompt: str = market_sentiment_agent_prompt, kite=N
         + """
                 ONLY respond to the part of query relevant to your purpose.
                 IGNORE tasks you can't complete. 
-                Use the following agent history to answer your query if available: \n {agent_history} \n
-                """,
-        input_variables=["agent_history"],
+                """
     )
-    get_stock_info_tool = partial(get_stock_info, kite=kite)
-    tools.append(
-        Tool(
-            name="get_stock_info",
-            func=get_stock_info_tool,
-            description="Get historical information about a stock including historical data",
-        )
-    )
+    # get_stock_info_tool = partial(get_stock_info, kite=kite)
+    # tools.append(
+    #     Tool(
+    #         name="get_stock_info",
+    #         func=get_stock_info_tool,
+    #         description="Get historical information about a stock including historical data",
+    #         args_schema=StockInfoInput,
+    #     )
+    # )
+    # get_stock_info_tool = get_stock_info
+    tools.append(get_stock_info)
     # define system message
     system_message_prompt = SystemMessagePromptTemplate(prompt=system_prompt_template)
 
@@ -62,14 +68,12 @@ def create_tool_agent(system_prompt: str = market_sentiment_agent_prompt, kite=N
         [
             system_message_prompt,
             MessagesPlaceholder(variable_name="messages"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
+            # MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    executor = AgentExecutor(
-        agent=agent, tools=tools, return_intermediate_steps=True, verbose=False
-    )
-    return executor
+    agent = create_react_agent(llm, tools, prompt=prompt, state_schema=State)
+
+    return agent
 
 
 import operator
@@ -148,7 +152,7 @@ def create_market_sentiment_agent(node):
     #     },
     # )
     # 4. Add a normal edge after `tools` is called, `llm` node is called next.
-    # workflow.add_edge(END, "llm")
+    workflow.add_edge("llm", END)
 
     # Now we can compile and visualize our graph
     graph = workflow.compile()

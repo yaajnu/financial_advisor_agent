@@ -1,33 +1,80 @@
 import os
-from langchain_core.tools import tool
+from langchain_core.tools import tool, BaseTool
 from financial_advisor_agent.utils import (
     check_internal_db,
     conn,
     cursor,
 )
+from langchain_core.tools import InjectedToolArg, tool
+from typing_extensions import Annotated
+from langgraph.prebuilt.chat_agent_executor import AgentState
 
 from .utils import calculate_indicators
 from financial_advisor_agent.constants import key_secret
 import pandas as pd
 
+from pydantic import BaseModel, Field
+from typing import Optional
 
-# @tool(
-#     "get_stock_info",
-#     description="Get historical information about a stock including historical data",
-# )
-def get_stock_info(stock_symbol: str, from_date: str, to_date: str, kite) -> dict:
+
+# This class defines the "form" the LLM needs to fill out.
+class StockInfoInput(BaseModel):
+    stock_symbol: str = Field(
+        ...,
+        description="The stock ticker symbol, for example 'RELIANCE' or 'ANGELONE'.",
+    )
+    from_date: str = Field(
+        ...,
+        description="The start date for the data in YYYY-MM-DD format. The current year is 2025 if not specified.",
+    )
+    to_date: str = Field(
+        ...,
+        description="The end date for the data in YYYY-MM-DD format. The current year is 2025 if not specified.",
+    )
+    kite: Annotated[object, InjectedToolArg] = Field(
+        ...,
+        description="The Kite Connect client instance for accessing stock data.",
+    )
+
+
+class State(AgentState):
+    kite: object  # = Field(
+    #     ...,
+    #     description="The Kite Connect client instance for accessing stock data.",
+    # )
+
+
+from langgraph.prebuilt import InjectedState
+
+
+@tool(
+    "get_stock_info",
+    description="Get historical information about a stock including historical data",
+    # args_schema=StockInfoInput,
+)
+def get_stock_info(
+    stock_symbol: str,
+    from_date: str,
+    to_date: str,
+    kite: Annotated[dict, InjectedState],
+) -> dict:
     """
-    Get information about a stock.
+        Get information about a stock.
 
     Args:
         stock_symbol (str): The stock symbol to get information for.
         from_date (str): The start date for the data retrieval.
         to_date (str): The end date for the data retrieval.
+        kite (object): Kite Connect instance for accessing stock data.
 
     Returns:
         str: Information about the stock.
     """
     # Placeholder for actual stock information retrieval logic
+    # print(f"Received args: {args}")
+    # stock_symbol = args.stock_symbol
+    # from_date = args.from_date
+    # to_date = args.to_date
     access_token = os.environ.get("KITE_ACCESS_TOKEN")
     print("KITE_ACCESS_TOKEN:", access_token)
     if check_internal_db(cursor, stock_symbol):
@@ -46,6 +93,7 @@ def get_stock_info(stock_symbol: str, from_date: str, to_date: str, kite) -> dic
         if not access_token:
             print("Access token not found, please AUTHENTICATE first.")
             return {f"Access token not found for accessing the {stock_symbol} data."}
+        kite = kite["kite"]
         all_insts = kite.instruments("NSE")
         all_insts_df = pd.DataFrame(all_insts)
         stock_symbol = stock_symbol.upper()

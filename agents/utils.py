@@ -7,7 +7,8 @@ from langgraph.graph.message import add_messages
 
 from financial_advisor_agent.constants import GOOGLE_SEARCH_API_KEY
 from financial_advisor_agent.tools.get_indicator_data import get_indicator_data
-from financial_advisor_agent.tools.get_stock_info import get_stock_info
+
+# from financial_advisor_agent.tools.get_stock_info import get_stock_info
 from financial_advisor_agent.tools.get_news_headlines import get_news_headlines
 
 # from financial_advisor_agent.tools.utils import market_sentiment_tools
