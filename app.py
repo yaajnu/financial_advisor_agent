@@ -1,3 +1,124 @@
+import sys
+import os
+import subprocess
+from dotenv import load_dotenv
+
+project_root = os.path.dirname(os.path.abspath(__file__))
+
+# Add to Python path if not already there
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+if __name__ == "__main__":
+    __package__ = ""
+
+load_dotenv()
+print("Running startup initialization...")
+
+# Install private repos
+github_token = os.getenv("GITHUB_TOKEN")
+print("BONDAAAAAA")
+commands = [
+    {
+        "name": "Update package list",
+        "cmd": [
+            "apt-get",
+            "update",
+        ],
+        "timeout": 120,
+    },
+    {
+        "name": "Download tools",
+        "cmd": [
+            "apt-get",
+            "install",
+            "build-essential",
+            # "wget",
+        ],
+        "timeout": 120,
+    },
+    {
+        "name": "Download TA-Lib source",
+        "cmd": [
+            "wget",
+            "https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib-0.6.4-src.tar.gz",
+        ],
+        "timeout": 120,
+    },
+    {
+        "name": "Extract archive",
+        "cmd": ["tar", "-xzf", "ta-lib-0.6.4-src.tar.gz"],
+        "timeout": 30,
+    },
+    {
+        "name": "Configure build",
+        "cmd": ["./configure", "--prefix=/usr"],
+        "cwd": "ta-lib-0.6.4",
+        "timeout": 60,
+    },
+    {"name": "Compile source", "cmd": ["make"], "cwd": "ta-lib-0.6.4", "timeout": 300},
+    {
+        "name": "Install TA-Lib",
+        "cmd": ["make", "install"],
+        "cwd": "ta-lib-0.6.4",
+        "timeout": 60,
+    },
+]
+print(os.listdir("."))
+for step in commands:
+    try:
+        print(f"🔧 {step['name']}...")
+        cwd = step.get("cwd", ".")
+        timeout = step.get("timeout", 60)
+
+        result = subprocess.run(
+            step["cmd"], cwd=cwd, timeout=timeout, capture_output=True, text=True
+        )
+
+        if result.returncode == 0:
+            print(f"✅ {step['name']} completed")
+        else:
+            print(f"❌ {step['name']} failed: {result.stderr}")
+    except Exception as e:
+        print(f"❌ Error in {step['name']}: {e}")
+print(os.listdir("."))
+print(os.getcwd())
+# os.chdir("ta-lib")
+subprocess.check_call([sys.executable, "-m", "pip", "install", "ta-lib"])
+os.chdir("..")
+if github_token:
+    subprocess.run(
+        [
+            "git",
+            "config",
+            "--global",
+            f"url.https://x-access-token:{github_token}@github.com/.insteadOf",
+            "https://github.com/",
+        ],
+        check=False,
+    )
+
+    # Clone the repository directly
+    repo_dir = "./financial_advisor_agent"
+    if not os.path.exists(repo_dir):
+        try:
+            subprocess.check_call(
+                [
+                    "git",
+                    "clone",
+                    f"https://x-access-token:{github_token}@github.com/yaajnu/financial_advisor_agent.git",
+                    repo_dir,
+                ]
+            )
+            print("✅ Repository cloned successfully")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to clone repository: {e}")
+import os
+
+print(os.listdir("."))
+
+# Any other initialization
+print("Startup initialization complete!")
 import os
 import traceback
 import gradio as gr
@@ -211,3 +332,7 @@ with gr.Blocks(theme=gr.themes.Soft(), title="Financial Advisor Chatbot") as dem
 # --- Launch the App ---
 if __name__ == "__main__":
     demo.launch()
+
+
+# demo.launch()
+# print("BONDS")
