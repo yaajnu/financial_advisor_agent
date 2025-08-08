@@ -76,7 +76,6 @@ def get_stock_info(
     # from_date = args.from_date
     # to_date = args.to_date
     access_token = os.environ.get("KITE_ACCESS_TOKEN")
-    print("KITE_ACCESS_TOKEN:", access_token)
     if check_internal_db(cursor, stock_symbol):
         query = """SELECT * 
             FROM historical_price_data 

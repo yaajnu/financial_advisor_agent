@@ -23,7 +23,6 @@ from langchain_core.runnables import RunnableConfig
 from langchain_groq import ChatGroq
 from financial_advisor_agent.constants import GROQ_API_KEY
 
-print("GROQ_API_KEY:", GROQ_API_KEY)
 llm = ChatGroq(
     model="meta-llama/llama-4-scout-17b-16e-instruct",
     api_key=GROQ_API_KEY,
