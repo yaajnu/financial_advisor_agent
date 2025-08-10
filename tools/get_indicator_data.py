@@ -26,7 +26,7 @@ def get_indicator_data(stock_symbol: str, from_date: str, to_date: str) -> dict:
         IndicatorData.stock_symbol == stock_symbol,
         IndicatorData.timestamp.between(from_date, to_date),
     )
-    df = pd.read_sql_query(query, session.bind)
+    df = pd.read_sql_query(query.statement, session.bind)
     if not df.empty:
         return df[
             [

@@ -8,13 +8,6 @@ from pyotp import TOTP
 import time
 
 
-def create_sqlite_connection(db_path: str):
-    """Create a SQLite database connection."""
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    cursor = conn.cursor()
-    return conn, cursor
-
-
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
