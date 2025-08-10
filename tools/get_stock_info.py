@@ -1,10 +1,8 @@
 import os
 from langchain_core.tools import tool, BaseTool
-from financial_advisor_agent.utils import (
-    check_internal_db,
-    conn,
-    cursor,
-)
+from financial_advisor_agent.utils import session
+from financial_advisor_agent.sql_utils import HistoricalPriceData, IndicatorData
+from sqlalchemy.dialects.postgresql import insert
 from langchain_core.tools import InjectedToolArg, tool
 from typing_extensions import Annotated
 from langgraph.prebuilt.chat_agent_executor import AgentState
@@ -76,15 +74,18 @@ def get_stock_info(
     # from_date = args.from_date
     # to_date = args.to_date
     access_token = os.environ.get("KITE_ACCESS_TOKEN")
-    if check_internal_db(cursor, stock_symbol):
-        query = """SELECT * 
-            FROM historical_price_data 
-            WHERE stock_symbol = ? AND timestamp BETWEEN ? AND ?        """
-        cursor.execute(query, (stock_symbol, from_date, to_date))
-        result = cursor.fetchall()
-        if result:
-            print("BONDAAAAAAAAAAAA")
-            return pd.DataFrame(result).to_dict()
+    query = (
+        session.query(HistoricalPriceData)
+        .filter(
+            HistoricalPriceData.stock_symbol == stock_symbol,
+            HistoricalPriceData.timestamp.between(from_date, to_date),
+        )
+        .order_by(HistoricalPriceData.timestamp)
+    )
+    result = pd.read_sql(query.statement, query.session.bind)
+    if not result.empty:
+        print("BONDAAAAAAAAAAAA")
+        return result.to_dict()
     else:
         print("extracting from zerodha")
         """ ZERODHA FETCH DATA LOGIC"""
@@ -111,7 +112,7 @@ def get_stock_info(
         historical_data = kite.historical_data(
             from_date=from_date,
             to_date=to_date,
-            interval="day",
+            interval="60minute",
             instrument_token=instrument_token,
         )
         # Convert to DataFrame for easier manipulation
@@ -139,7 +140,16 @@ def get_stock_info(
             ]
         ]
         try:
-            temp.to_sql("indicator_data", conn, if_exists="append", index=False)
+            table_model = IndicatorData.__table__
+            records_to_insert = temp.to_dict(orient="records")
+            insert_stmt = insert(table_model).values(records_to_insert)
+            # Define the final "upsert" statement
+            upsert_stmt = insert_stmt.on_conflict_do_nothing(
+                index_elements=["timestamp", "stock_symbol"]
+            )
+
+            session.execute(upsert_stmt)
+            session.commit()
             historical_data_df.drop(
                 columns=[
                     "RSI",

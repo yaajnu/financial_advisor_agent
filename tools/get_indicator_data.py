@@ -1,7 +1,8 @@
 import pandas as pd
 from typing import Dict
 from langchain.tools import tool
-from financial_advisor_agent.utils import check_internal_db, conn, cursor
+from financial_advisor_agent.utils import session
+from financial_advisor_agent.sql_utils import IndicatorData
 
 
 @tool(
@@ -20,32 +21,28 @@ def get_indicator_data(stock_symbol: str, from_date: str, to_date: str) -> dict:
     Returns:
         str: Historical data for the specified stock.
     """
-    if check_internal_db(cursor, stock_symbol, is_price_data=False):
-        query = """SELECT * 
-           FROM indicator_data 
-           WHERE stock_symbol = ? AND timestamp BETWEEN ? AND ?"""
 
-        df = pd.read_sql_query(query, conn, params=(stock_symbol, from_date, to_date))
-        if not df.empty:
-            return df[
-                [
-                    "timestamp",
-                    "RSI",
-                    "EMA_5",
-                    "EMA_9",
-                    "EMA_20",
-                    "VWAP",
-                    "MACD",
-                    "MACD_Signal",
-                    "MACD_Histogram",
-                    "Volume_SMA_5",
-                    "Volume_Ratio",
-                ]
-            ].to_dict()
-        else:
-            return {
-                f"No indicator data found for {stock_symbol} between {from_date} and {to_date} in the internal database."
-            }
+    query = session.query(IndicatorData).filter(
+        IndicatorData.stock_symbol == stock_symbol,
+        IndicatorData.timestamp.between(from_date, to_date),
+    )
+    df = pd.read_sql_query(query, session.bind)
+    if not df.empty:
+        return df[
+            [
+                "timestamp",
+                "RSI",
+                "EMA_5",
+                "EMA_9",
+                "EMA_20",
+                "VWAP",
+                "MACD",
+                "MACD_Signal",
+                "MACD_Histogram",
+                "Volume_SMA_5",
+                "Volume_Ratio",
+            ]
+        ].to_dict()
     else:
         # Placeholder for fetching indicator data from an external source if not in the DB.
         # This part would be similar to get_stock_info's Zerodha logic but adapted for indicators.

@@ -55,6 +55,7 @@ grpcio-status==1.74.0
 h11==0.16.0
 hf-xet==1.1.5
 httpcore==1.0.9
+httptools==0.6.4
 httpx==0.28.1
 httpx-sse==0.4.1
 huggingface-hub==0.34.3
@@ -127,6 +128,7 @@ propcache==0.3.2
 proto-plus==1.26.1
 protobuf==6.31.1
 psutil==7.0.0
+psycopg2-binary==2.9.10
 ptyprocess==0.7.0
 pure_eval==0.2.3
 pyarrow==21.0.0
