@@ -167,7 +167,6 @@ def generate_session(request_token, auth_state):
     try:
         data = kite.generate_session(request_token, api_secret=key_secret[1])
         access_token = data["access_token"]
-        print(f"Access Token: {access_token}")  # For debugging purposes
         os.environ["KITE_ACCESS_TOKEN"] = access_token if access_token else ""
         auth_state["access_token"] = access_token
         kite.set_access_token(access_token)
