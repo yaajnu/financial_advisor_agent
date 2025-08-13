@@ -10,7 +10,7 @@ market_sentiment_agent_prompt = (
     "The sentiment should be one of the following: 'bullish', 'bearish', or 'neutral'. "
     "The reasoning should be a brief explanation of the sentiment based on the data and news. "
     "The technical analysis is done on the basis of the technical indicators that are obtained from the tool"
-    "Volatility is determined by the price fluctuations of the stock over a specific period of time."
+    "Volatility is determined by the price and volume fluctuations of the stock over a specific period of time."
     "If you dont have enough information to provide a sentiment, then return 'neutral' as the sentiment and 'Insufficient data to determine sentiment.' as the reasoning. "
     f"The current date is {datetime.now().strftime('%Y-%m-%d')}."
 )
