@@ -112,7 +112,6 @@ if github_token:
             print(f"❌ Failed to clone repository: {e}")
 import os
 
-print(os.listdir("."))
 
 # Any other initialization
 print("Startup initialization complete!")
@@ -231,9 +230,7 @@ def chat_response(user_message, history, auth_state):
 
     try:
         kite = auth_state["kite"]
-        top_agent = create_tool_agent(kite=kite)
-        top_agent_node = partial(market_sentiment_nodes, agent=top_agent, name="llm")
-        agent = create_market_sentiment_agent(top_agent_node)
+        agent = create_market_sentiment_agent()
         inputs = {
             "messages": [("user", user_message)],
             "agent_scratchpad": [],
@@ -241,7 +238,7 @@ def chat_response(user_message, history, auth_state):
         }
 
         full_response = ""
-        for state in top_agent.stream(inputs, stream_mode="values"):
+        for state in agent.stream(inputs, stream_mode="values"):
             # for state in top_agent.invoke(inputs, stream_mode="values"):
             all_messages = state["messages"]
             print(f"Current messages: {all_messages}")
@@ -256,10 +253,6 @@ def chat_response(user_message, history, auth_state):
             history[-1][1] = full_response
             rationale_string = format_rationale_messages(all_messages)
 
-            # Yield a tuple to update both components
-            # history = top_agent.invoke(inputs)
-            print(f"Agent response: {history}")
-            print("-------------")
             yield history, rationale_string
 
     except Exception as e:

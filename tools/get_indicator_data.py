@@ -1,5 +1,7 @@
 import pandas as pd
 from typing import Dict
+from langgraph.types import Command
+from langchain_core.messages import AIMessage
 from langchain.tools import tool
 from financial_advisor_agent.utils import session
 from financial_advisor_agent.sql_utils import IndicatorData
@@ -29,7 +31,7 @@ def get_indicator_data(stock_symbol: str, from_date: str, to_date: str) -> dict:
     df = pd.read_sql_query(query.statement, session.bind)
     df.fillna(0, inplace=True)  # Fill NaN values with "N/A"
     if not df.empty:
-        return df[
+        temp = df[
             [
                 "timestamp",
                 "RSI",
@@ -44,6 +46,16 @@ def get_indicator_data(stock_symbol: str, from_date: str, to_date: str) -> dict:
                 "Volume_Ratio",
             ]
         ].to_dict()
+        Command(
+            graph=Command.PARENT,
+            update={
+                "indicator_data": temp,
+                "messages": AIMessage(
+                    content=f"Retrieved indicator data for {stock_symbol} from {from_date} to {to_date}."
+                ),
+            },
+        )
+        return temp
     else:
         # Placeholder for fetching indicator data from an external source if not in the DB.
         # This part would be similar to get_stock_info's Zerodha logic but adapted for indicators.

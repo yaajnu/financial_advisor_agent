@@ -1,9 +1,17 @@
 from langchain_core.messages import SystemMessage
 from datetime import datetime
 
+fin_answer_prompt = (
+    " If you are unable to fully answer, that's OK, another assistant with different tools "
+    " will help where you left off. Execute what you can to make progress."
+    " If you or any of the other assistants have the final answer or deliverable,"
+    " prefix your response with FINAL ANSWER so the team knows to stop."
+)
+
 market_sentiment_agent_prompt = (
     "You are an expert financial assistant with vast expertise in technical analysis. "
     "Your primary goal is to provide the accurate market sentiment for the stock by using the tools at your disposal. "
+    "Extract the stock symbol and dates from the user prompt"
     "You can use the tools to find accurate information about the historical and indicator data and give the market sentiment as well as the latest news about the stock in question by using the relevant information from prompt. "
     "But don't use the tools to get data for more than 45 days in the past from the current date. "
     "The response provided should be concise and to the point and in a dictionary format with the keys 'sentiment', 'reasoning' , 'technical analysis' , 'volatility'. "
@@ -13,6 +21,8 @@ market_sentiment_agent_prompt = (
     "Volatility is determined by the price and volume fluctuations of the stock over a specific period of time."
     "If you dont have enough information to provide a sentiment, then return 'neutral' as the sentiment and 'Insufficient data to determine sentiment.' as the reasoning. "
     f"The current date is {datetime.now().strftime('%Y-%m-%d')}."
+    f" When you are outputting the dictionary add MARKET SENTIMENT at the end"
+    # f"{fin_answer_prompt}"
 )
 types_of_trading_strategies = {
     "Trend Following": {
@@ -151,5 +161,9 @@ strategy_selector_agent_prompt = (
     "You are a quant trader who has access to the latest market data and a summary of the current market conditions passed on to you by an expert financial analyst"
     "You have a list of strategies which have been proven to be effective in different market conditions along with the conditions in which they have been effective."
     "Your task is to select a strategy to use and give the price at which an entry can be made to the stock along with a stop loss based on how the market is currently behaving."
-    f"The trading strategies available to you are: {types_of_trading_strategies}"
+    "Use the dictionary above MARKET SENTIMENT in the last message"
+    "Output the strategy as well that you are using to make this decision"
+    "Return a dictionary with the keys target price, stop loss , strategy, entry point"
+    # f"The trading strategies available to you are: {types_of_trading_strategies}"
+    f"{fin_answer_prompt}"
 )

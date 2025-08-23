@@ -1,6 +1,8 @@
 import os
-from langchain_core.tools import tool, BaseTool
+from langchain_core.tools import tool
 from financial_advisor_agent.utils import session
+from langgraph.types import Command
+from langchain_core.messages import AIMessage
 from financial_advisor_agent.sql_utils import HistoricalPriceData, IndicatorData
 from sqlalchemy.dialects.postgresql import insert
 from langchain_core.tools import InjectedToolArg, tool
@@ -12,7 +14,6 @@ from financial_advisor_agent.constants import key_secret
 import pandas as pd
 
 from pydantic import BaseModel, Field
-from typing import Optional
 
 
 # This class defines the "form" the LLM needs to fill out.
@@ -139,6 +140,15 @@ def get_stock_info(
                 "Volume_Ratio",
             ]
         ]
+        Command(
+            graph=Command.PARENT,
+            update={
+                "indicator_data": temp,
+                "messages": AIMessage(
+                    content=f"Retrieved indicator data for {stock_symbol} from {from_date} to {to_date}."
+                ),
+            },
+        )
         try:
             table_model = IndicatorData.__table__
             records_to_insert = temp.to_dict(orient="records")
