@@ -131,7 +131,7 @@ from financial_advisor_agent.agents.market_sentiment_agent import (
 from functools import partial
 
 # Assuming your agent messages are from LangChain
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 # Load environment variables if you are using a .env file
 load_dotenv()
@@ -194,20 +194,37 @@ def format_rationale_messages(messages):
         return "No intermediate steps to display."
 
     formatted_string = "### Agent Rationale\n\n"
-    for msg in intermediate_steps:
-        print(f"Processing message: {msg}")
-        if isinstance(msg, AIMessage) and msg.tool_calls:
-            formatted_string += "**🤖 Thought & Tool Call:**\n"
-            if msg.content:
-                formatted_string += f"{msg.content}\n"
-            for tool_call in msg.tool_calls:
-                formatted_string += f"- Calling tool: `{tool_call['name']}` with arguments: `{tool_call['args']}`\n"
-        elif isinstance(msg, ToolMessage):
-            formatted_string += f"\n**🛠️ Tool Output for `{msg.name}`:**\n"
-            formatted_string += f"```\n{msg.content}\n```\n\n"
-        elif isinstance(msg, AIMessage):
-            # This is the final answer, we can omit it or show it as 'Final Thought'
-            pass  # Omit from rationale as it's in the main chat
+    for msgs in intermediate_steps:
+        for msg in msgs:
+            if type(msg) == list:
+                for sub_msg in msg:
+                    if isinstance(sub_msg, AIMessage) and sub_msg.tool_calls:
+                        formatted_string += "**🤖 Thought & Tool Call:**\n"
+                        if sub_msg.content:
+                            formatted_string += f"{sub_msg.content}\n"
+                        for tool_call in sub_msg.tool_calls:
+                            formatted_string += f"- Calling tool: `{tool_call['name']}` with arguments: `{tool_call['args']}`\n"
+                    elif isinstance(sub_msg, ToolMessage):
+                        formatted_string += (
+                            f"\n**🛠️ Tool Output for `{sub_msg.name}`:**\n"
+                        )
+                        formatted_string += f"```\n{sub_msg.content}\n```\n\n"
+                    elif isinstance(sub_msg, AIMessage):
+                        # This is the final answer, we can omit it or show it as 'Final Thought'
+                        continue  # Omit from rationale as it's in the main chat
+            else:
+                if isinstance(msg, AIMessage) and msg.tool_calls:
+                    formatted_string += "**🤖 Thought & Tool Call:**\n"
+                    if msg.content:
+                        formatted_string += f"{msg.content}\n"
+                    for tool_call in msg.tool_calls:
+                        formatted_string += f"- Calling tool: `{tool_call['name']}` with arguments: `{tool_call['args']}`\n"
+                elif isinstance(msg, ToolMessage):
+                    formatted_string += f"\n**🛠️ Tool Output for `{msg.name}`:**\n"
+                    formatted_string += f"```\n{msg.content}\n```\n\n"
+                elif isinstance(msg, AIMessage):
+                    # This is the final answer, we can omit it or show it as 'Final Thought'
+                    continue  # Omit
 
     return formatted_string
 
@@ -231,36 +248,29 @@ def chat_response(user_message, history, auth_state):
 
     try:
         kite = auth_state["kite"]
-        top_agent = create_tool_agent(kite=kite)
-        top_agent_node = partial(market_sentiment_nodes, agent=top_agent, name="llm")
-        agent = create_market_sentiment_agent(top_agent_node)
+        agent = create_market_sentiment_agent()
         inputs = {
-            "messages": [("user", user_message)],
+            "messages": [HumanMessage(content=user_message)],
             "agent_scratchpad": [],
             "kite": kite,
         }
 
         full_response = ""
-        for state in top_agent.stream(inputs, stream_mode="values"):
+        all_mssgs = []
+        for state in agent.stream(inputs, stream_mode="values"):
             # for state in top_agent.invoke(inputs, stream_mode="values"):
             all_messages = state["messages"]
-            print(f"Current messages: {all_messages}")
             # The final user-facing response is always the content of the last AIMessage
             final_message_obj = next(
                 (m for m in reversed(all_messages) if isinstance(m, AIMessage)), None
             )
-
             if final_message_obj and final_message_obj.content:
                 full_response = final_message_obj.content
 
             history[-1][1] = full_response
+            # rationale_string = format_rationale_messages(all_messages)
             rationale_string = format_rationale_messages(all_messages)
-
-            # Yield a tuple to update both components
-            # history = top_agent.invoke(inputs)
-            print(f"Agent response: {history}")
-            print("-------------")
-            yield history, rationale_string
+        yield history, rationale_string
 
     except Exception as e:
         print(traceback.format_exc(e))
