@@ -151,5 +151,5 @@ strategy_selector_agent_prompt = (
     "You are a quant trader who has access to the latest market data and a summary of the current market conditions passed on to you by an expert financial analyst"
     "You have a list of strategies which have been proven to be effective in different market conditions along with the conditions in which they have been effective."
     "Your task is to select a strategy to use and give the price at which an entry can be made to the stock along with a stop loss based on how the market is currently behaving."
-    f"The trading strategies available to you are: {types_of_trading_strategies}"
+    # f"The trading strategies available to you are: {types_of_trading_strategies}"
 )

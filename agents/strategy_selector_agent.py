@@ -14,6 +14,8 @@ from langchain_core.prompts import (
 )
 from langchain_groq import ChatGroq
 from financial_advisor_agent.constants import GROQ_API_KEY
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 
 llm = ChatGroq(
     model="meta-llama/llama-4-scout-17b-16e-instruct",
@@ -32,23 +34,6 @@ def create_strategy_agent(system_prompt: str = strategy_selector_agent_prompt):
         executor (AgentExecutor): Runnable for the agent created.
     """
 
-    system_prompt_template = PromptTemplate(
-        template=system_prompt
-        + """
-                ONLY respond to the part of query relevant to your purpose.
-                IGNORE tasks you can't complete. 
-                """
-    )
-    # tools.append(get_stock_info)
-    # define system message
-    system_message_prompt = SystemMessagePromptTemplate(prompt=system_prompt_template)
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            system_message_prompt,
-            MessagesPlaceholder(variable_name="messages"),
-        ]
-    )
-    agent = create_react_agent(llm, tools=[], prompt=prompt)
+    agent = llm
 
     return agent
